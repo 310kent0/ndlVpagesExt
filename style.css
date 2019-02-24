@@ -1,0 +1,16 @@
+ol#result-list > li {
+    border-bottom: solid 1px;
+}
+.title {
+    margin-top: .5rem;
+    font-size: 1rem;
+    font-weight: normal;
+    z-index: 1;
+}
+.extent {
+    height: 1rem;
+    position: absolute;
+    bottom: .5rem;
+    right: 0;
+    background-color: lightgray;
+}

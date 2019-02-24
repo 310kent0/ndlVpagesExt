@@ -1,0 +1,14 @@
+{
+  "name": "ndlvpagesext",
+  "version": "1.0.0",
+  "description": "NDLサーチのAPIを使ってページ数を可視化するアプリケーションです。",
+  "main": "background.js",
+  "scripts": {
+    "test": "web-ext run"
+  },
+  "author": "310kento",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "web-ext": "^3.0.0"
+  }
+}
