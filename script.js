@@ -8,10 +8,13 @@ $(() => {
 			return;
 		}
 		
-		// ajaxで検索結果を取得
-		$.ajax(
-			'http://iss.ndl.go.jp/api/sru' + location.search + '&startRecord=' + startRecord
-		).done((data, textStatus, jqXHR) => {
+		var parser = new DOMParser();
+		//fetchで検索結果を取得
+		fetch('https://iss.ndl.go.jp/api/sru' + location.search + '&startRecord=' + startRecord).then(function(response) {
+			return response.text();
+		}).then(function(text) {
+			var data = parser.parseFromString(text, 'text/xml');
+			
 			// 検索結果を表示
 			
 			// 検索結果一覧の表示領域の生成
@@ -19,24 +22,28 @@ $(() => {
 				$('#result').append($('<ol id="result-list"></ol>'));
 			}
 			
+			// 検索結果の取得と名前空間リゾルバの作成
+			var result = data.evaluate('.//rdf:RDF', data, function() { return 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'; }, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+			var nsr = data.createNSResolver(result.snapshotItem(0));
+			
 			// 全てのrecordDataを表示処理
-			$(data).find('recordData').each(function() {
-				// 要素をjQueryオブジェクト化
-				var dataElement = $(this);
+			for (var i = 0; i < result.snapshotLength; i ++) {
+				var rdf = result.snapshotItem(i);
 				
 				// recordData 1件分の表示領域の生成
 				var liElement = $('<li class="row offset-lg-2 col-lg-8"></li>');
 				$('#result-list').append(liElement);
 				
 				// タイトルの表示
-				var about = dataElement.find('dcndl\\:BibAdminResource').eq(0).attr('rdf:about');
-				var title = dataElement.find('dcterms\\:title').eq(0).html();
+				var about = data.evaluate('.//@rdf:about', rdf, nsr, XPathResult.STRING_TYPE, null).stringValue;
+				var title = data.evaluate('.//dcterms:title', rdf, nsr, XPathResult.STRING_TYPE, null).stringValue;
+				
 				var titleElement = $('<h2 class="title"><a href="' + about + '" target="_blank">' + title + '</a></h2>');
 				liElement.append(titleElement);
 				
 				// ページ数イメージの表示
-				var extentDataElement = dataElement.find('dcterms\\:extent').eq(0);
-				if (extentDataElement && extentDataElement.text().replace(/[０-９ｐ]/g,(c) => {
+				var extentData = data.evaluate('.//dcterms:extent', rdf, nsr, XPathResult.STRING_TYPE, null).stringValue;
+				if (extentData && extentData.replace(/[０-９ｐ]/g, c => {
 					return String.fromCharCode(c.charCodeAt(0) - 0xFEE0)
 				}).match(/(\d+?)\s*p/) != null) {
 					var extent = RegExp.$1 / 2 * 0.11;
@@ -46,13 +53,12 @@ $(() => {
 					extentElement.css({width: extent + 'mm'});
 					liElement.append(extentElement);
 				};
-			});
+			}
 			
 			// 表示件数を進める
 			startRecord +=  parseInt($('#maximumRecords').val(), 10);
 
-			
-		}).fail((jqXHR, textStatus, errorThrown) => {
+		}).catch(function(error) {
 		});
 	}
 	
