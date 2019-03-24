@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 	<head>
 		<meta charset="UTF-8" />
@@ -35,34 +35,38 @@
 				<p>このアプリケーションは国立国会図書館サーチのAPIを使用して、本を検索、ページ数を視覚化します。プロトコルはSRUを使用しています。</p>
 				<p>左側のグレーの四角の長さがページ数を表しています。※本の厚みではありません。</p>
 			</div>
-			<form action="" id="search-form" class="form-horizontal">
-				<div id="cql-parameter">
-					<div class="form-group row">
-						<label for="title" class="col-lg-1 control-label">タイトル</label>
-						<div class="col-lg-11">
-							<input type="text" id="title" class="form-control" name="title" placeholder="タイトル" />
-						</div>
+			<form id="cql-parameter">
+				<div class="form-group row">
+					<label for="title" class="col-lg-1 control-label">タイトル</label>
+					<div class="col-lg-11">
+						<input type="text" id="title" class="form-control" name="title" placeholder="タイトル" />
 					</div>
-					<div class="form-group row">
-						<label for="creator" class="col-lg-1 control-label">作成者</label>
-						<div class="col-lg-11">
-							<input type="text" id="creator" class="form-control" name="creator" placeholder="作成者" />
-						</div>
-					</div>
-					<div class="form-group row">
-						<label for="publisher" class="col-lg-1 control-label">出版者</label>
-						<div class="col-lg-11">
-							<input type="text" id="publisher" class="form-control" name="publisher" placeholder="出版者" />
-						</div>
-					</div>
-					<div class="form-group row">
-						<div class="offset-sm-1 col-lg-11">
-							<button class="btn btn-primary">検索</button>
-						</div>
-					</div>
-					<input type="hidden" id="mediatype" name="mediatype" value="1"　/>
 				</div>
-				<input type="hidden" id="cql" name="cql" value=""　/>
+				<div class="form-group row">
+					<label for="creator" class="col-lg-1 control-label">作成者</label>
+					<div class="col-lg-11">
+						<input type="text" id="creator" class="form-control" name="creator" placeholder="作成者" />
+					</div>
+				</div>
+				<div class="form-group row">
+					<label for="publisher" class="col-lg-1 control-label">出版者</label>
+					<div class="col-lg-11">
+						<input type="text" id="publisher" class="form-control" name="publisher" placeholder="出版者" />
+					</div>
+				</div>
+				<div class="form-group row">
+					<div class="offset-sm-1 col-lg-11">
+						<button class="btn btn-primary">検索</button>
+					</div>
+				</div>
+				<input type="hidden" id="mediatype" name="mediatype" value="1" />
+			</form>
+			<form action="" id="search-form" class="form-horizontal">
+				<input type="hidden" id="operation" name="operation" value="searchRetrieve" />
+				<input type="hidden" id="recordSchema" name="recordSchema" value="dcndl" />
+				<input type="hidden" id="recordPacking" name="recordPacking" value="xml" />
+				<input type="hidden" id="maximumRecords" name="maximumRecords" value="10" />
+				<input type="hidden" id="query" name="query" />
 			</form>
 			<div id="result">
 			</div>
