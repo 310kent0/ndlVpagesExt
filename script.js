@@ -1,111 +1,187 @@
-// 表示件数を初期化
-var startRecord = 1;
-
-$(() => {
-	function search() {
-		// cqlパラメーターがなければ処理を終了
-		if (!location.search || location.search.match(/query=.*?(&|$)/) == null) {
-			return;
-		}
-		
-		var parser = new DOMParser();
-		//fetchで検索結果を取得
-		fetch('https://iss.ndl.go.jp/api/sru' + location.search + '&startRecord=' + startRecord).then(function(response) {
-			return response.text();
-		}).then(function(text) {
-			var data = parser.parseFromString(text, 'text/xml');
-			
-			// 検索結果を表示
-			
-			// 検索結果一覧の表示領域の生成
-			if ($('#result-list').length === 0) {
-				$('#result').append($('<ol id="result-list"></ol>'));
-			}
-			
-			// 検索結果の取得と名前空間リゾルバの作成
-			var result = data.evaluate('.//rdf:RDF', data, function() { return 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'; }, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-			var nsr = data.createNSResolver(result.snapshotItem(0));
-			
-			// 全てのrecordDataを表示処理
-			for (var i = 0; i < result.snapshotLength; i ++) {
-				var rdf = result.snapshotItem(i);
-				
-				// recordData 1件分の表示領域の生成
-				var liElement = $('<li class="row offset-lg-2 col-lg-8"></li>');
-				$('#result-list').append(liElement);
-				
-				// タイトルの表示
-				var about = data.evaluate('.//@rdf:about', rdf, nsr, XPathResult.STRING_TYPE, null).stringValue;
-				var title = data.evaluate('.//dcterms:title', rdf, nsr, XPathResult.STRING_TYPE, null).stringValue;
-				
-				var titleElement = $('<h2 class="title"><a href="' + about + '" target="_blank">' + title + '</a></h2>');
-				liElement.append(titleElement);
-				
-				// ページ数イメージの表示
-				var extentData = data.evaluate('.//dcterms:extent', rdf, nsr, XPathResult.STRING_TYPE, null).stringValue;
-				if (extentData && extentData.replace(/[０-９ｐ]/g, c => {
-					return String.fromCharCode(c.charCodeAt(0) - 0xFEE0)
-				}).match(/(\d+?)\s*p/) != null) {
-					var extent = RegExp.$1 / 2 * 0.11;
-					
-					// ページ数イメージの表示領域の生成
-					var extentElement = $('<div class="extent"></div>');
-					extentElement.css({width: extent + 'mm'});
-					liElement.append(extentElement);
-				};
-			}
-			
-			// 表示件数を進める
-			startRecord +=  parseInt($('#maximumRecords').val(), 10);
-
-		}).catch(function(error) {
-		});
-	}
+(function()  {
+	// 取得開始位置
+	var startRecord;
 	
-	$('#cql-parameter').submit(function() {
-		// submit前にcqlを組み立てる
-		var query = '';
-		$(this).find('input').each(function() {
-			var input = $(this);
-			// 空ではないcqlパラメーターを全てANDで連結
-			if (input.val() != '') {
-				if (query != '') {
-					query += ' AND ';
-				}
-				query += input.attr('name') + ' = "' + input.val() + '"';
-			}
-		});
-		$('#query').val(query);
-		
-		// 表示件数を初期化
-		startRecord = 1;
-		
-		// 検索結果一覧の表示領域の削除
-		$('#result').empty();
-		
-		history.pushState(null, null, '?' + $('#search-form').serialize());
-		search();
-		return false;
+	//DOM パーサー
+	var parser = new DOMParser();
+	
+	// xslt読み込み
+	var xslt = new XSLTProcessor();
+	var loadXslt = fetch('./xml2html.xsl').then(function(response) {
+	 	// HTTPエラー処理
+		if (!response.ok) {
+	 		throw Error(response.statusText);
+	 	}
+	 	return response;
+	}).then(function(response) {
+		return response.text();
+	}).then(async function(text) {
+		// xsltインポート
+		xslt.importStylesheet(parser.parseFromString(text, 'text/xml'));
+	}).catch(function(error) {
+		// エラー表示
+		alert(error);
 	});
 	
-	$('#next').click(search);
-	
-	function init() {
-		// フォームの入力内容を復元
-		$('#cql-parameter input').each(function() {
-			var input = $(this);
-			if (decodeURIComponent(location.search).match(new RegExp(this.name + ' = "(.*?)"')) != null) {
-				input.val(RegExp.$1);
+	$(function()  {
+		// 検索
+		function search() {
+			// cqlパラメーターがなければ処理を終了
+			if (!location.search
+			 	|| location.search.match(/query=.*?(&|$)/) == null
+			) {
+				return;
 			}
+			
+			// ボタン非活性化
+			$('button').attr('disabled', true);
+			
+			//fetchで検索結果を取得
+			fetch(
+				'https://iss.ndl.go.jp/api/sru'
+					+ location.search
+					+ '&startRecord='
+					+ startRecord
+			).then(function(response) {
+				// エラー処理
+				if (!response.ok) {
+					throw Error(response.statusText);
+				}
+				return response;
+			}).then(function(response) {
+				return response.text();
+			}).then(async function(text) {
+				// xslt読み込み待ち
+				await loadXslt;
+				
+				// レスポンスxmlをパース
+				var data = parser.parseFromString(text, 'text/xml');
+				var jdata = $(data);
+				
+				// エラー表示
+				var diagnostics = jdata.find('diagnostics');
+				if (diagnostics.length !== 0) {
+					alert(diagnostics.text());
+					$('#search-btn').attr('disabled', false);
+					return;
+				}
+				
+				// xsltでレスポンスxmlをhtmlに変換
+				var fragment = $(xslt.transformToFragment(data, document));
+				
+				// ページ数を視覚化
+				fragment.find('.extent').each(function() {
+					// 大きさ、容量等を取得
+					var extentElement = $(this);
+					var extentData = extentElement.text();
+					
+					// 全角文字を半角文字に変換してページ数の表記を抽出
+					var matched = extentData.replace(
+							/[０-９ｐＰ]/g,
+							c => {
+								return String.fromCharCode(c.charCodeAt(0) - 0xFEE0)
+							}
+						).replace(/，/g, ',').replace(/　/g, ' ')
+						.match(/((\d+)\s*((,\s*)|p))+/i);
+					
+					if(matched) {
+						// ページ数を背景色の幅で視覚化
+						var extent = matched[0].split(',') // カンマ区切りで配列化
+							.map(function (a) {
+								return parseInt(a, 10); //ページ数を文字列から数値に変換
+							}).reduce(function (sum, a) {
+								return sum + a; // ページ数の合計を算出
+							}) / 2 * 0.155; // 適当な係数でmmに変換
+						// cssのグラデーション背景を使ってページ数を表現
+						extentElement.closest('.data').css({
+							background: 'linear-gradient(90deg, lightgray 0%, lightgray ' + extent + 'mm, transparent ' + extent + 'mm, transparent 100%)'
+						});
+					} else {
+						// ページ数の表記を抽出できなかった場合は背景色は透明化
+						extentElement.closest('.row').css({
+							background: 'transparent'
+						});
+					};
+				});
+				
+				// 検索結果の表示領域の生成
+				if ($('#result-list').length === 0) {
+					// 検索結果一覧
+					$('#result').append($('<div class="offset-xl-1  col-xl-11"><ol id="result-list" class="list-group w-100"></ol></div>'));
+					// ヒット数
+					$('#result').append($('<p id="numberOfRecords" class="offset-xl-1  col-xl-11">' + jdata.find('numberOfRecords').text() + '件ヒット</p>'));
+				}
+				
+				// 検索結果一覧の表示
+				$('#result-list').append(fragment);
+				
+				// 取得開始位置を進める
+				startRecord = jdata.find('nextRecordPosition').text();
+				
+				// ボタン活性化
+				if (startRecord != '0') {
+					$('#next').attr('disabled', false);
+				}
+				$('#search-btn').attr('disabled', false);
+			}).catch(function(error) {
+				// エラー表示
+				alert(error);
+			});
+		}
+		
+		$('#cql-parameter').submit(function() {
+			// submit前にcqlを組み立てる
+			var query = '';
+			$(this).find('input').each(function() {
+				// 空ではないcqlパラメーターを全てANDで連結
+				if (this.value != '') {
+					if (query != '') {
+						query += ' AND ';
+					}
+					query += this.name + ' = "' + this.value + '"';
+				}
+			});
+			$('#query').val(query);
+			
+			// 取得開始位置を初期化
+			startRecord = '1';
+			// 検索結果一覧の表示領域の削除
+			$('#result').empty();
+			
+			// 検索パラメーター復元のためurl書き換え
+			history.pushState(null, null, '?' + $('#search-form').serialize());
+			
+			search();
+			
+			return false;
 		});
 		
-		// 表示件数を初期化
-		startRecord = 1;
+		$('#next').click(search);
 		
-		search();
-	}
-	
-	$(window).on("popstate", init);
-	
-	init();
-});
+		// 初期処理
+		function init() {
+			// フォームの入力内容を復元
+			$('#cql-parameter input').each(function() {
+				var input = $(this);
+				if (decodeURIComponent(location.search)
+					.match(new RegExp(this.name + ' = "(.*?)"')) != null
+				) {
+					input.val(RegExp.$1);
+				}
+			});
+			
+			// 取得開始位置を初期化
+			startRecord = '1';
+			// 検索結果一覧の表示領域の削除
+			$('#result').empty();
+			
+			search();
+		}
+		
+		// ブラウザバックの際に初期処理を実行
+		$(window).on("popstate", init);
+		
+		init();
+	});
+})();
+

@@ -1,7 +1,8 @@
 function openPage() {
   browser.tabs.create({
-    url: "ndl_vpages.html"
+    url: "./index.html"
   });
 }
 
 browser.browserAction.onClicked.addListener(openPage);
+

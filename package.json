@@ -1,8 +1,7 @@
 {
   "name": "ndlvpagesext",
   "version": "1.0.0",
-  "description": "NDLサーチのAPIを使ってページ数を可視化するアプリケーションです。",
-  "main": "background.js",
+  "description": "NDLサーチのAPIを使って書籍のページ数を視覚化するアプリケーションです。",
   "scripts": {
     "test": "web-ext run"
   },
@@ -12,3 +11,4 @@
     "web-ext": "^3.0.0"
   }
 }
+
