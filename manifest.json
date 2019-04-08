@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "ndlvpagesext",
   "version": "1.0.0",
-  "description": "NDLサーチのAPIを使って書籍のページ数を視覚化するアプリケーションです。",
+  "description": "NDLサーチのAPIを使って書籍のページ数を視覚化する拡張機能です。",
   "permissions": [
     "https://iss.ndl.go.jp/api/sru"
   ],
