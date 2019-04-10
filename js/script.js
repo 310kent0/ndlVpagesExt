@@ -7,7 +7,7 @@
 	
 	// xslt読み込み
 	var xslt = new XSLTProcessor();
-	var loadXslt = fetch('./xml2html.xsl').then(function(response) {
+	var loadXslt = fetch('./xsl/xml2html.xsl').then(function(response) {
 	 	// HTTPエラー処理
 		if (!response.ok) {
 	 		throw Error(response.statusText);
